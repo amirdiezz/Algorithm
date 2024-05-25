@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Graph Algorithms</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css">
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f4f4f9;
+            color: #333;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            display: flex;
+            justify-content: space-between;
+            height: 100vh;
+        }
+        .form-container {
+            flex: 0 0 30%;
+            padding: 20px;
+            padding-bottom: 20px;
+            background: #36c3ee;
+            box-shadow: 0 0 10px rgba(27, 128, 196, 0.1);
+            border-radius: 0 30px 30px 0px;
+        }
+        .map-container {
+            flex: 1;
+            overflow: hidden;
+        }
+        h1 {
+            font-size: 24px;
+            margin-bottom: 20px;
+            color: #333;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #666;
+        }
+        select, button {
+            width: 100%;
+            padding: 10px;
+            margin: 5px 0;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 16px;
+            background-color: #f9f9f9;
+            color: #333;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .results {
+            margin-top: 20px;
+        }
+        .result {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-bottom: 10px;
+            background-color: #fafafa;
+        }
+        .loading {
+            display: none;
+            text-align: center;
+            margin-top: 20px;
+            font-style: italic;
+            color: #666;
+        }
+        svg {
+            width: 100%;
+            height: 100%;
+            background-color: #fafafa;
+        }
+        .node {
+            fill: #007bff;
+        }
+        .edge {
+            stroke: #ccc;
+            stroke-width: 2;
+        }
+        .highlight {
+            stroke: #36c3ee;
+            stroke-width: 3;
+        }
+        .node-label {
+            font-size: 12px;
+            text-anchor: middle;
+            fill: #0e010f;
+        }
+        @media screen and (max-width: 768px) {
+            .container {
+                flex-direction: column;
+            }
+            .form-container, .map-container {
+                width: 100%;
+                margin-right: 0;
+                flex: 0 0 auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="form-container">
+            <h1>Graph Algorithms: Shortest Path Finder</h1>
+            <div class="form-group">
+                <label for="start">Starting Point:</label>
+                <select id="start">
+                    <option value="Titiwangsa">Titiwangsa</option>
+                    <option value="Chow Kit">Chow Kit</option>
+                    <option value="PWTC">PWTC</option>
+                    <option value="Dang Wangi">Dang Wangi</option>
+                    <option value="Bukit Nanas">Bukit Nanas</option>
+                    <option value="Hang Tuah">Hang Tuah</option>
+                    <option value="Bukit Bintang">Bukit Bintang</option>
+                    <option value="Medan Tuanku">Medan Tuanku</option>
+                    <option value="Masjid Jamek">Masjid Jamek</option>
+                    <option value="KL Sentral">KL Sentral</option>
+                </select>
+                <label for="end">Ending Point:</label>
+                <select id="end">
+                    <option value="Titiwangsa">Titiwangsa</option>
+                    <option value="Chow Kit">Chow Kit</option>
+                    <option value="PWTC">PWTC</option>
+                    <option value="Dang Wangi">Dang Wangi</option>
+                    <option value="Bukit Nanas">Bukit Nanas</option>
+                    <option value="Hang Tuah">Hang Tuah</option>
+                    <option value="Bukit Bintang">Bukit Bintang</option>
+                    <option value="Medan Tuanku">Medan Tuanku</option>
+                    <option value="Masjid Jamek">Masjid Jamek</option>
+                    <option value="KL Sentral">KL Sentral</option>
+                </select>
+            </div>
+            <button onclick="findPaths()">Find Paths</button>
+
+            <div class="loading" id="loading">Loading...</div>
+
+            <div class="results">
+                <h2>Results</h2>
+                <div id="dijkstraResult" class="result"></div>
+                <div id="bfsResult" class="result"></div>
+                <div id="bellmanFordResult" class="result"></div>
+            </div>
+        </div>
+
+        <div class="map-container">
+            <svg id="graph" viewBox="0 0 800 600"></svg>
+        </div>
+    </div>
+
+    <script>
+        const graph = {
+            'Titiwangsa': {'Chow Kit': 1.5, 'PWTC': 1},
+            'Chow Kit': {'Titiwangsa': 1.5, 'Dang Wangi': 3},
+            'PWTC': {'Titiwangsa': 1, 'Medan Tuanku': 1.5, 'Masjid Jamek': 2.1},
+            'Dang Wangi': {'Chow Kit': 3, 'Bukit Nanas': 1.7, 'Hang Tuah': 2.45, 'Bukit Bintang': 1.4},
+            'Bukit Nanas': {'Dang Wangi': 1.7, 'Bukit Bintang': 1},
+            'Hang Tuah': {'Dang Wangi': 2.45, 'KL Sentral': 3.1},
+            'Bukit Bintang': {'Dang Wangi': 1.4, 'Bukit Nanas': 1, 'KL Sentral': 3.5},
+            'Medan Tuanku': {'PWTC': 1.5, 'Masjid Jamek': 2.1},
+            'Masjid Jamek': {'PWTC': 2.1, 'Medan Tuanku': 2.1, 'KL Sentral': 2.35},
+            'KL Sentral': {'Hang Tuah': 3.1, 'Bukit Bintang': 3.5, 'Masjid Jamek': 2.35}
+        };
+
+        const positions = {
+            'Titiwangsa': [100, 100],
+            'Chow Kit': [200, 150],
+            'PWTC': [150, 200],
+            'Dang Wangi': [300, 200],
+            'Bukit Nanas': [400, 150],
+            'Hang Tuah': [450, 300],
+            'Bukit Bintang': [400, 250],
+            'Medan Tuanku': [250, 300],
+            'Masjid Jamek': [350, 350],
+            'KL Sentral': [500, 400]
+        };
+
+        function drawGraph() {
+            const svg = document.getElementById('graph');
+            svg.innerHTML = '';
+
+            for (const node in graph) {
+                for (const neighbor in graph[node]) {
+                    const [x1, y1] = positions[node];
+                    const [x2, y2] = positions[neighbor];
+                    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                    line.setAttribute('x1', x1);
+                    line.setAttribute('y1', y1);
+                    line.setAttribute('x2', x2);
+                    line.setAttribute('y2', y2);
+                    line.setAttribute('class', 'edge');
+                    svg.appendChild(line);
+                }
+            }
+
+            for (const node in positions) {
+                const [x, y] = positions[node];
+                const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                circle.setAttribute('cx', x);
+                circle.setAttribute('cy', y);
+                circle.setAttribute('r', 10);
+                circle.setAttribute('class', 'node');
+                svg.appendChild(circle);
+
+                const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                text.setAttribute('x', x);
+                text.setAttribute('y', y - 15);
+                text.setAttribute('class', 'node-label');
+                text.textContent = node;
+                svg.appendChild(text);
+            }
+        }
+
+        function highlightPath(path) {
+            const svg = document.getElementById('graph');
+            const edges = svg.getElementsByClassName('edge');
+            for (const edge of edges) {
+                edge.setAttribute('class', 'edge');
+            }
+
+            for (let i = 0; i < path.length - 1; i++) {
+                const u = path[i];
+                const v = path[i + 1];
+                const [x1, y1] = positions[u];
+                const [x2, y2] = positions[v];
+
+                for (const edge of edges) {
+                    const ex1 = parseInt(edge.getAttribute('x1'));
+                    const ey1 = parseInt(edge.getAttribute('y1'));
+                    const ex2 = parseInt(edge.getAttribute('x2'));
+                    const ey2 = parseInt(edge.getAttribute('y2'));
+
+                    if ((ex1 === x1 && ey1 === y1 && ex2 === x2 && ey2 === y2) ||
+                        (ex1 === x2 && ey1 === y2 && ex2 === x1 && ey2 === y1)) {
+                        edge.setAttribute('class', 'edge highlight');
+                    }
+                }
+            }
+        }
+
+        function dijkstra(graph, start, end) {
+            const distances = {};
+            const queue = [];
+            const previous = {};
+            Object.keys(graph).forEach(v => {
+                distances[v] = Infinity;
+                previous[v] = null;
+                queue.push(v);
+            });
+            distances[start] = 0;
+
+            while (queue.length) {
+                const u = queue.reduce((min, vertex) => 
+                    distances[vertex] < distances[min] ? vertex : min, queue[0]);
+                queue.splice(queue.indexOf(u), 1);
+
+                if (u === end) {
+                    const path = [];
+                    let temp = u;
+                    while (temp) {
+                        path.unshift(temp);
+                        temp = previous[temp];
+                    }
+                    return { path, distance: distances[u] };
+                }
+
+                for (const neighbor in graph[u]) {
+                    const alt = distances[u] + graph[u][neighbor];
+                    if (alt < distances[neighbor]) {
+                        distances[neighbor] = alt;
+                        previous[neighbor] = u;
+                    }
+                }
+            }
+            return { path: [], distance: Infinity };
+        }
+
+        function bfs_recursive(graph, start, end) {
+            function bfs_helper(queue, visited, pathMap) {
+                if (!queue.length) return { path: [], distance: Infinity };
+                const [current, path] = queue.shift();
+                if (current === end) return { path, distance: path.length - 1 };
+                if (!visited.has(current)) {
+                    visited.add(current);
+                    for (const neighbor of Object.keys(graph[current])) {
+                        if (!visited.has(neighbor)) {
+                            queue.push([neighbor, path.concat(neighbor)]);
+                            pathMap[neighbor] = path.concat(neighbor);
+                        }
+                    }
+                }
+                return bfs_helper(queue, visited, pathMap);
+            }
+
+            const queue = [[start, [start]]];
+            const visited = new Set();
+            const pathMap = { [start]: [start] };
+            return bfs_helper(queue, visited, pathMap);
+        }
+
+        function bellman_ford(graph, start, end) {
+            const distances = {};
+            const predecessors = {};
+            Object.keys(graph).forEach(v => {
+                distances[v] = Infinity;
+                predecessors[v] = null;
+            });
+            distances[start] = 0;
+
+            for (let i = 0; i < Object.keys(graph).length - 1; i++) {
+                for (const u in graph) {
+                    for (const v in graph[u]) {
+                        const weight = graph[u][v];
+                        if (distances[u] + weight < distances[v]) {
+                            distances[v] = distances[u] + weight;
+                            predecessors[v] = u;
+                        }
+                    }
+                }
+            }
+
+            for (const u in graph) {
+                for (const v in graph[u]) {
+                    if (distances[u] + graph[u][v] < distances[v]) {
+                        throw new Error("Graph contains a negative weight cycle");
+                    }
+                }
+            }
+
+            const path = [];
+            let temp = end;
+            while (temp) {
+                path.unshift(temp);
+                temp = predecessors[temp];
+            }
+            return { path, distance: distances[end] };
+        }
+
+        function findPaths() {
+            const start = document.getElementById('start').value;
+            const end = document.getElementById('end').value;
+            document.getElementById('loading').style.display = 'block';
+            setTimeout(() => {
+                try {
+                    let startTime = performance.now();
+                    const dijkstraResult = dijkstra(graph, start, end);
+                    let endTime = performance.now();
+                    document.getElementById('dijkstraResult').innerText =
+                        `Dijkstra: Path - ${dijkstraResult.path.join(' -> ')}, Distance - ${dijkstraResult.distance} KM, Execution Time - ${(endTime - startTime).toFixed(2)} ms`;
+                    highlightPath(dijkstraResult.path);
+
+                    startTime = performance.now();
+                    const bfsResult = bfs_recursive(graph, start, end);
+                    endTime = performance.now();
+                    document.getElementById('bfsResult').innerText =
+                        `BFS (Recursive): Path - ${bfsResult.path.join(' -> ')}, Distance - ${bfsResult.distance} edges, Execution Time - ${(endTime - startTime).toFixed(2)} ms`;
+
+                    startTime = performance.now();
+                    const bellmanFordResult = bellman_ford(graph, start, end);
+                    endTime = performance.now();
+                    document.getElementById('bellmanFordResult').innerText =
+                        `Bellman-Ford: Path - ${bellmanFordResult.path.join(' -> ')}, Distance - ${bellmanFordResult.distance} KM, Execution Time - ${(endTime - startTime).toFixed(2)} ms`;
+                } catch (error) {
+                    document.getElementById('bellmanFordResult').innerText = error.message;
+                } finally {
+                    document.getElementById('loading').style.display = 'none';
+                }
+            }, 500);
+        }
+
+        document.addEventListener('DOMContentLoaded', drawGraph);
+    </script>
+</body>
+</html>
